@@ -1,0 +1,23 @@
+services:
+  se-server:
+    build: .
+    container_name: se-server
+    restart: unless-stopped
+    ports:
+      - "27016:27016/udp"
+    volumes:
+      - ./data/world:/server/world
+      - ./data/config:/server/config
+      - ./data/backups:/server/backups
+      - ./data/mods:/server/mods
+      - ./data/server-install:/server/install
+    environment:
+      - SERVER_NAME=${SERVER_NAME:-Space Engineers Server}
+      - WORLD_NAME=${WORLD_NAME:-Star System}
+      - SERVER_PORT=${SERVER_PORT:-27016}
+      - ADMIN_IDS=${ADMIN_IDS:-}
+      - MODS=${MODS:-}
+      - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-6}
+      - AUTO_UPDATE=${AUTO_UPDATE:-true}
+    stdin_open: true
+    tty: true
