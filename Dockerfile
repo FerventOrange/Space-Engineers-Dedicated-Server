@@ -12,18 +12,21 @@ RUN dpkg --add-architecture i386 && \
         software-properties-common \
         wget \
         xvfb \
+        xauth \
         winbind \
         cabextract \
         lib32gcc-s1 \
+        gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Wine from WineHQ
-RUN mkdir -pm755 /etc/apt/keyrings && \
-    wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key && \
-    wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/debian/dists/bookworm/winehq-bookworm.sources && \
-    apt-get update && \
-    apt-get install -y --install-recommends winehq-stable && \
-    rm -rf /var/lib/apt/lists/*
+# Install Wine 8 (stable) from Debian repos instead of WineHQ
+# Wine 8 has proven compatibility with SE dedicated server
+RUN apt-get update && \
+    apt-get install -y --install-recommends \
+        wine \
+        wine64 \
+        wine32 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install winetricks
 RUN wget -O /usr/local/bin/winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks && \
@@ -50,7 +53,7 @@ RUN /server/scripts/install-steamcmd.sh
 ENV WINEPREFIX=/home/steam/.wine
 ENV WINEARCH=win64
 ENV WINEDEBUG=-all
-RUN xvfb-run wine wineboot --init && \
+RUN xvfb-run wineboot --init && \
     wineserver --wait
 
 # Install .NET Framework 4.8 via winetricks (required by SE server)
