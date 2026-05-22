@@ -65,9 +65,13 @@
   <PauseGameWhenEmpty>true</PauseGameWhenEmpty>
   <IgnoreLastSession>false</IgnoreLastSession>
   <Administrators>
+<!-- ADMIN_IDS_PLACEHOLDER -->
   </Administrators>
-  <Banned />
-  <Mods />
+  <Banned>
+  </Banned>
+  <Mods>
+<!-- MODS_PLACEHOLDER -->
+  </Mods>
   <GroupID>0</GroupID>
   <ServerDescription></ServerDescription>
 </MyConfigDedicated>

@@ -18,16 +18,25 @@ if [ -z "$1" ]; then
     exit 0
 fi
 
-BACKUP_FILE="$BACKUP_DIR/$1"
+BACKUP_FILE="$(realpath -m "$BACKUP_DIR/$1")"
+if [[ "$BACKUP_FILE" != "$BACKUP_DIR/"* ]]; then
+    echo "Error: Invalid backup path (must be within $BACKUP_DIR)"
+    exit 1
+fi
 
 if [ ! -f "$BACKUP_FILE" ]; then
     echo "Error: Backup file not found: $BACKUP_FILE"
     exit 1
 fi
 
+# Check if the server is running
+if pgrep -f SpaceEngineersDedicated.exe > /dev/null 2>&1; then
+    echo "Error: The server is still running. Stop it first with 'docker compose stop'."
+    exit 1
+fi
+
 echo "=== Restoring from: $BACKUP_FILE ==="
 echo "WARNING: This will overwrite the current world data."
-echo "The server should be stopped before restoring."
 
 # Clear existing world data
 rm -rf "${WORLD_DIR:?}"/*

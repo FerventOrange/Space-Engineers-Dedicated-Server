@@ -1,2 +1,4 @@
 data/
 *.tar.gz
+.env
+.env.*

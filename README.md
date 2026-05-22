@@ -85,9 +85,20 @@ docker exec se-server /server/scripts/restore.sh
 
 ### Restoring a Backup
 
+Restore directly from the host (the backup files are in `data/backups/`):
+
 ```bash
 docker compose stop
-docker exec se-server /server/scripts/restore.sh world_backup_20250101_120000.tar.gz
+# Extract backup into the world directory
+tar -xzf data/backups/world_backup_20250101_120000.tar.gz -C data/world/
+docker compose start
+```
+
+Alternatively, use a temporary container with the same volumes:
+
+```bash
+docker compose stop
+docker compose run --rm se-server /server/scripts/restore.sh world_backup_20250101_120000.tar.gz
 docker compose start
 ```
 

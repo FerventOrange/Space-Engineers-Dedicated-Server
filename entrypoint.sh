@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 INSTALL_DIR="/server/install"
 CONFIG_DIR="/server/config"
@@ -9,6 +8,35 @@ BACKUP_INTERVAL_HOURS="${BACKUP_INTERVAL_HOURS:-6}"
 AUTO_UPDATE="${AUTO_UPDATE:-true}"
 SERVER_PID=""
 BACKUP_PID=""
+
+# --- Input validation ---
+validate_numeric_list() {
+    local name="$1" value="$2"
+    if [ -n "$value" ]; then
+        IFS=',' read -ra ITEMS <<< "$value"
+        for ITEM in "${ITEMS[@]}"; do
+            ITEM=$(echo "$ITEM" | tr -d ' ')
+            if ! [[ "$ITEM" =~ ^[0-9]+$ ]]; then
+                echo "ERROR: $name contains non-numeric value: $ITEM"
+                exit 1
+            fi
+        done
+    fi
+}
+
+validate_numeric_list "ADMIN_IDS" "$ADMIN_IDS"
+validate_numeric_list "MODS" "$MODS"
+
+if ! [[ "$BACKUP_INTERVAL_HOURS" =~ ^[0-9]+$ ]] || [ "$BACKUP_INTERVAL_HOURS" -eq 0 ]; then
+    echo "ERROR: BACKUP_INTERVAL_HOURS must be a positive integer, got: $BACKUP_INTERVAL_HOURS"
+    exit 1
+fi
+
+export SERVER_PORT="${SERVER_PORT:-27016}"
+if ! [[ "$SERVER_PORT" =~ ^[0-9]+$ ]] || [ "$SERVER_PORT" -lt 1 ] || [ "$SERVER_PORT" -gt 65535 ]; then
+    echo "ERROR: SERVER_PORT must be a valid port number (1-65535), got: $SERVER_PORT"
+    exit 1
+fi
 
 # Graceful shutdown handler
 shutdown_handler() {
@@ -29,12 +57,12 @@ trap shutdown_handler SIGTERM SIGINT
 # Auto-update server
 if [ "$AUTO_UPDATE" = "true" ]; then
     echo "=== Auto-update enabled ==="
-    /server/scripts/update-server.sh
+    /server/scripts/update-server.sh || { echo "ERROR: Server update failed"; exit 1; }
 else
     echo "=== Auto-update disabled ==="
     if [ ! -f "$INSTALL_DIR/DedicatedServer64/SpaceEngineersDedicated.exe" ]; then
         echo "Server not installed, running initial install..."
-        /server/scripts/update-server.sh
+        /server/scripts/update-server.sh || { echo "ERROR: Server install failed"; exit 1; }
     fi
 fi
 
@@ -43,39 +71,54 @@ CONFIG_FILE="$CONFIG_DIR/SpaceEngineers-Dedicated.cfg"
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "=== Applying default server configuration ==="
 
-    # Build admin list XML
+    # Build admin list XML (using real newlines, not \n literals)
     ADMIN_XML=""
     if [ -n "$ADMIN_IDS" ]; then
         IFS=',' read -ra AIDS <<< "$ADMIN_IDS"
         for AID in "${AIDS[@]}"; do
             AID=$(echo "$AID" | tr -d ' ')
-            ADMIN_XML="${ADMIN_XML}    <unsignedLong>${AID}</unsignedLong>\n"
+            printf -v ADMIN_XML '%s    <unsignedLong>%s</unsignedLong>\n' "$ADMIN_XML" "$AID"
         done
     fi
 
-    # Build mods list XML
+    # Build mods list XML (using real newlines, not \n literals)
     MODS_XML=""
     if [ -n "$MODS" ]; then
         IFS=',' read -ra MIDS <<< "$MODS"
         for MID in "${MIDS[@]}"; do
             MID=$(echo "$MID" | tr -d ' ')
-            MODS_XML="${MODS_XML}    <ModItem>\n      <Name>${MID}.sbm</Name>\n      <PublishedFileId>${MID}</PublishedFileId>\n    </ModItem>\n"
+            printf -v MODS_XML '%s    <ModItem>\n      <Name>%s.sbm</Name>\n      <PublishedFileId>%s</PublishedFileId>\n    </ModItem>\n' "$MODS_XML" "$MID" "$MID"
         done
     fi
 
     export SERVER_NAME="${SERVER_NAME:-Space Engineers Server}"
     export WORLD_NAME="${WORLD_NAME:-Star System}"
-    export SERVER_PORT="${SERVER_PORT:-27016}"
-    export ADMIN_XML
-    export MODS_XML
 
-    # Apply envsubst for simple vars, then inject admin/mods XML
+    # Apply envsubst for simple vars, write to temp file
+    TMP_CONFIG=$(mktemp)
     envsubst '${SERVER_NAME} ${WORLD_NAME} ${SERVER_PORT}' \
         < "$TEMPLATE_DIR/SpaceEngineers-Dedicated.cfg.template" \
-        | sed "s|</Administrators>|${ADMIN_XML}</Administrators>|" \
-        | sed "s|</Mods>|${MODS_XML}</Mods>|" \
-        > "$CONFIG_FILE"
+        > "$TMP_CONFIG"
 
+    # Inject admin IDs using awk (safe for multi-line content)
+    if [ -n "$ADMIN_XML" ]; then
+        awk -v xml="$ADMIN_XML" '{sub(/<!-- ADMIN_IDS_PLACEHOLDER -->/, xml)}1' \
+            "$TMP_CONFIG" > "${TMP_CONFIG}.tmp" && mv "${TMP_CONFIG}.tmp" "$TMP_CONFIG"
+    else
+        grep -v '<!-- ADMIN_IDS_PLACEHOLDER -->' "$TMP_CONFIG" > "${TMP_CONFIG}.tmp" \
+            && mv "${TMP_CONFIG}.tmp" "$TMP_CONFIG"
+    fi
+
+    # Inject mod items using awk (safe for multi-line content)
+    if [ -n "$MODS_XML" ]; then
+        awk -v xml="$MODS_XML" '{sub(/<!-- MODS_PLACEHOLDER -->/, xml)}1' \
+            "$TMP_CONFIG" > "${TMP_CONFIG}.tmp" && mv "${TMP_CONFIG}.tmp" "$TMP_CONFIG"
+    else
+        grep -v '<!-- MODS_PLACEHOLDER -->' "$TMP_CONFIG" > "${TMP_CONFIG}.tmp" \
+            && mv "${TMP_CONFIG}.tmp" "$TMP_CONFIG"
+    fi
+
+    mv "$TMP_CONFIG" "$CONFIG_FILE"
     echo "Config written to $CONFIG_FILE"
 fi
 
@@ -121,18 +164,29 @@ fi
 echo "=== Starting Space Engineers Dedicated Server ==="
 echo "Server Name: ${SERVER_NAME:-Space Engineers Server}"
 echo "World Name: ${WORLD_NAME:-Star System}"
-echo "Port: ${SERVER_PORT:-27016}/udp"
+echo "Port: ${SERVER_PORT}/udp"
 
 export WINEPREFIX=/home/steam/.wine
 export WINEARCH=win64
 export WINEDEBUG=-all
 
+# Convert Linux path to Windows path for Wine
+WIN_CONFIG_DIR=$(winepath -w "$CONFIG_DIR" 2>/dev/null || echo 'Z:\server\config')
+
 xvfb-run wine "$SERVER_EXE" \
     -console \
-    -path "$CONFIG_DIR" &
+    -path "$WIN_CONFIG_DIR" &
 SERVER_PID=$!
 
 echo "=== Server started (PID: $SERVER_PID) ==="
 
-# Wait for server process
-wait "$SERVER_PID"
+# Wait for server process (|| true prevents script exit on non-zero return)
+wait "$SERVER_PID" || true
+EXIT_CODE=$?
+
+# Clean up backup loop
+if [ -n "$BACKUP_PID" ] && kill -0 "$BACKUP_PID" 2>/dev/null; then
+    kill "$BACKUP_PID" 2>/dev/null || true
+fi
+
+echo "=== Server exited with code: $EXIT_CODE ==="

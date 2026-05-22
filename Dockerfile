@@ -17,6 +17,7 @@ RUN dpkg --add-architecture i386 && \
         cabextract \
         lib32gcc-s1 \
         gettext-base \
+        procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Wine 8 (stable) from Debian repos instead of WineHQ
@@ -65,5 +66,8 @@ RUN xvfb-run winetricks -q vcrun2019 && \
     wineserver --wait
 
 EXPOSE 27016/udp
+
+HEALTHCHECK --interval=60s --timeout=10s --retries=3 \
+    CMD pgrep -f SpaceEngineersDedicated.exe || exit 1
 
 ENTRYPOINT ["/server/entrypoint.sh"]
