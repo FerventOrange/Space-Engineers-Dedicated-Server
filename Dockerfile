@@ -38,11 +38,9 @@ RUN useradd -m -s /bin/bash steam && \
     mkdir -p /server/install /server/world /server/config /server/backups /server/mods /server/steamcmd && \
     chown -R steam:steam /server
 
-# Copy scripts
-COPY --chown=steam:steam scripts/ /server/scripts/
-COPY --chown=steam:steam entrypoint.sh /server/entrypoint.sh
-COPY --chown=steam:steam config/ /server/config-templates/
-RUN chmod +x /server/entrypoint.sh /server/scripts/*.sh
+# Copy only the install script needed for build-time SteamCMD setup
+COPY --chown=steam:steam scripts/install-steamcmd.sh /server/scripts/install-steamcmd.sh
+RUN chmod +x /server/scripts/install-steamcmd.sh
 
 USER steam
 WORKDIR /server
@@ -64,6 +62,12 @@ RUN xvfb-run winetricks -q dotnet48 && \
 # Install vcrun2019 (commonly needed by SE)
 RUN xvfb-run winetricks -q vcrun2019 && \
     wineserver --wait
+
+# Copy runtime scripts, entrypoint, and config templates (after expensive layers)
+COPY --chown=steam:steam scripts/ /server/scripts/
+COPY --chown=steam:steam entrypoint.sh /server/entrypoint.sh
+COPY --chown=steam:steam config/ /server/config-templates/
+RUN chmod +x /server/entrypoint.sh /server/scripts/*.sh
 
 EXPOSE 27016/udp
 
