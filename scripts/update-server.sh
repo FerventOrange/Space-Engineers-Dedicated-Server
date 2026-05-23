@@ -12,6 +12,11 @@ fi
 
 echo "=== Updating Space Engineers Dedicated Server (App ID: $APP_ID) ==="
 
+# Let SteamCMD self-update first so it doesn't restart mid-login
+echo "--- Checking for SteamCMD updates ---"
+"$STEAMCMD_DIR/steamcmd.sh" +quit || true
+
+echo "--- Downloading/updating SE server ---"
 "$STEAMCMD_DIR/steamcmd.sh" \
     +force_install_dir "$INSTALL_DIR" \
     +login "$STEAM_USER" "$STEAM_PASS" \
