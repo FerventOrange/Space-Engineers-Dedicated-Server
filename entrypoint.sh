@@ -38,6 +38,12 @@ if ! [[ "$SERVER_PORT" =~ ^[0-9]+$ ]] || [ "$SERVER_PORT" -lt 1 ] || [ "$SERVER_
     exit 1
 fi
 
+export MAX_BACKUP_SAVES="${MAX_BACKUP_SAVES:-5}"
+if ! [[ "$MAX_BACKUP_SAVES" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: MAX_BACKUP_SAVES must be a non-negative integer, got: $MAX_BACKUP_SAVES"
+    exit 1
+fi
+
 # Graceful shutdown handler
 shutdown_handler() {
     echo "=== Received shutdown signal ==="
@@ -93,10 +99,11 @@ if [ ! -f "$CONFIG_FILE" ]; then
 
     export SERVER_NAME="${SERVER_NAME:-Space Engineers Server}"
     export WORLD_NAME="${WORLD_NAME:-Star System}"
+    export MAX_BACKUP_SAVES="${MAX_BACKUP_SAVES:-5}"
 
     # Apply envsubst for simple vars, write to temp file
     TMP_CONFIG=$(mktemp)
-    envsubst '${SERVER_NAME} ${WORLD_NAME} ${SERVER_PORT}' \
+    envsubst '${SERVER_NAME} ${WORLD_NAME} ${SERVER_PORT} ${MAX_BACKUP_SAVES}' \
         < "$TEMPLATE_DIR/SpaceEngineers-Dedicated.cfg.template" \
         > "$TMP_CONFIG"
 

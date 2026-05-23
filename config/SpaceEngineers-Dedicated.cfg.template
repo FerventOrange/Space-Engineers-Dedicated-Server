@@ -6,7 +6,7 @@
     <EnableToolShake>true</EnableToolShake>
     <MaxPlayers>16</MaxPlayers>
     <MaxFloatingObjects>56</MaxFloatingObjects>
-    <MaxBackupSaves>5</MaxBackupSaves>
+    <MaxBackupSaves>${MAX_BACKUP_SAVES}</MaxBackupSaves>
     <MaxGridSize>50000</MaxGridSize>
     <MaxBlocksPerPlayer>100000</MaxBlocksPerPlayer>
     <TotalPCU>100000</TotalPCU>

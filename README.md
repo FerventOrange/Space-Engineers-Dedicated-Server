@@ -25,6 +25,7 @@ Set these in a `.env` file or pass them to `docker compose`:
 | `MODS` | *(empty)* | Comma-separated Steam Workshop mod IDs |
 | `AUTO_UPDATE` | `true` | Update SE server on every container start |
 | `BACKUP_INTERVAL_HOURS` | `6` | Hours between automatic world backups |
+| `MAX_BACKUP_SAVES` | `5` | Max in-game backup saves retained by the server |
 
 Example `.env` file:
 

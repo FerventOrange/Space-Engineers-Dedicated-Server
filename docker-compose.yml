@@ -19,6 +19,7 @@ services:
       - MODS=${MODS:-}
       - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-6}
       - AUTO_UPDATE=${AUTO_UPDATE:-true}
+      - MAX_BACKUP_SAVES=${MAX_BACKUP_SAVES:-5}
     stop_grace_period: 120s
     stdin_open: true
     tty: true
