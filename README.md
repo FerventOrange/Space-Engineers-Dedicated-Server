@@ -18,6 +18,8 @@ Set these in a `.env` file or pass them to `docker compose`:
 
 | Variable | Default | Description |
 |---|---|---|
+| `STEAM_USER` | *(required)* | Steam account username for SteamCMD |
+| `STEAM_PASS` | *(required)* | Steam account password for SteamCMD |
 | `SERVER_NAME` | `Space Engineers Server` | Server name shown in server browser |
 | `WORLD_NAME` | `Star System` | World/save name |
 | `SERVER_PORT` | `27016` | Game port (UDP) |
@@ -30,11 +32,15 @@ Set these in a `.env` file or pass them to `docker compose`:
 Example `.env` file:
 
 ```env
+STEAM_USER=your_steam_username
+STEAM_PASS=your_steam_password
 SERVER_NAME=My SE Server
 WORLD_NAME=Star System
 ADMIN_IDS=76561198000000001,76561198000000002
 MODS=754173702,857053359
 ```
+
+> **Note:** App 298740 (SE Dedicated Server) requires a Steam account — anonymous login is not supported. A dedicated Steam account is recommended. If your account has Steam Guard enabled, you may need to run `docker compose run --rm se-server` interactively for the first login to enter the guard code. Subsequent logins from the same container volume will be cached.
 
 ## Server Management
 

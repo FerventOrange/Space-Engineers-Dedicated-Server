@@ -138,7 +138,7 @@ if [ -n "$MODS" ]; then
         echo "Downloading mod: $MOD_ID"
         /server/steamcmd/steamcmd.sh \
             +force_install_dir /server/mods \
-            +login anonymous \
+            +login "$STEAM_USER" "$STEAM_PASS" \
             +workshop_download_item 244850 "$MOD_ID" \
             +quit || echo "Warning: Failed to download mod $MOD_ID (may require auth)"
     done

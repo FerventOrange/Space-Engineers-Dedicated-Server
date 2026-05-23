@@ -20,6 +20,8 @@ services:
       - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-6}
       - AUTO_UPDATE=${AUTO_UPDATE:-true}
       - MAX_BACKUP_SAVES=${MAX_BACKUP_SAVES:-5}
+      - STEAM_USER=${STEAM_USER:?STEAM_USER is required}
+      - STEAM_PASS=${STEAM_PASS:?STEAM_PASS is required}
     stop_grace_period: 120s
     stdin_open: true
     tty: true
