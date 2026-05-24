@@ -18,6 +18,7 @@ echo "--- Checking for SteamCMD updates ---"
 
 echo "--- Downloading/updating SE server ---"
 "$STEAMCMD_DIR/steamcmd.sh" \
+    +@sSteamCmdForcePlatformType windows \
     +force_install_dir "$INSTALL_DIR" \
     +login "$STEAM_USER" "$STEAM_PASS" \
     +app_update "$APP_ID" validate \
