@@ -18,6 +18,7 @@ RUN dpkg --add-architecture i386 && \
         lib32gcc-s1 \
         gettext-base \
         procps \
+        gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Wine 8 (stable) from Debian repos instead of WineHQ
@@ -63,15 +64,19 @@ RUN xvfb-run winetricks -q dotnet48 && \
 RUN xvfb-run winetricks -q vcrun2019 && \
     wineserver --wait
 
+# Switch to root for init wrapper setup
+USER root
+
 # Copy runtime scripts, entrypoint, and config templates (after expensive layers)
 COPY --chown=steam:steam scripts/ /server/scripts/
 COPY --chown=steam:steam entrypoint.sh /server/entrypoint.sh
 COPY --chown=steam:steam config/ /server/config-templates/
-RUN chmod +x /server/entrypoint.sh /server/scripts/*.sh
+COPY init.sh /server/init.sh
+RUN chmod +x /server/entrypoint.sh /server/scripts/*.sh /server/init.sh
 
 EXPOSE 27016/udp
 
 HEALTHCHECK --interval=60s --timeout=10s --retries=3 \
     CMD pgrep -f SpaceEngineersDedicated.exe || exit 1
 
-ENTRYPOINT ["/server/entrypoint.sh"]
+ENTRYPOINT ["/server/init.sh"]
