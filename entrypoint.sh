@@ -48,8 +48,9 @@ fi
 shutdown_handler() {
     echo "=== Received shutdown signal ==="
     if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
-        echo "Stopping server (PID: $SERVER_PID)..."
-        kill -TERM "$SERVER_PID"
+        echo "Stopping server process group (PID: $SERVER_PID)..."
+        # Kill the entire process group (xvfb-run + wine + SE server)
+        kill -TERM -- -"$SERVER_PID" 2>/dev/null || kill -TERM "$SERVER_PID" 2>/dev/null
         wait "$SERVER_PID" 2>/dev/null || true
     fi
     if [ -n "$BACKUP_PID" ] && kill -0 "$BACKUP_PID" 2>/dev/null; then
@@ -103,6 +104,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 
     # Apply envsubst for simple vars, write to temp file
     TMP_CONFIG=$(mktemp)
+    trap "rm -f '$TMP_CONFIG' '${TMP_CONFIG}.tmp'" EXIT
     envsubst '${SERVER_NAME} ${WORLD_NAME} ${SERVER_PORT} ${MAX_BACKUP_SAVES}' \
         < "$TEMPLATE_DIR/SpaceEngineers-Dedicated.cfg.template" \
         > "$TMP_CONFIG"
@@ -134,18 +136,18 @@ if [ -n "$MODS" ]; then
     echo "=== Downloading Workshop mods ==="
     IFS=',' read -ra MOD_IDS <<< "$MODS"
 
-    # Build a single SteamCMD command with all workshop downloads
-    WORKSHOP_ARGS=""
+    # Build a single SteamCMD command with all workshop downloads (using array)
+    WORKSHOP_ARGS=()
     for MOD_ID in "${MOD_IDS[@]}"; do
         MOD_ID=$(echo "$MOD_ID" | tr -d ' ')
         echo "  - Mod: $MOD_ID"
-        WORKSHOP_ARGS="$WORKSHOP_ARGS +workshop_download_item 244850 $MOD_ID"
+        WORKSHOP_ARGS+=(+workshop_download_item 244850 "$MOD_ID")
     done
 
     /server/steamcmd/steamcmd.sh \
         +force_install_dir /server/mods \
         +login "$STEAM_USER" "$STEAM_PASS" \
-        $WORKSHOP_ARGS \
+        "${WORKSHOP_ARGS[@]}" \
         +quit || echo "Warning: Some mods may have failed to download"
 
     echo "=== Mod download complete ==="
@@ -186,15 +188,16 @@ export WINEDEBUG=-all
 # Convert Linux path to Windows path for Wine
 WIN_CONFIG_DIR=$(winepath -w "$CONFIG_DIR" 2>/dev/null || echo 'Z:\server\config')
 
-xvfb-run wine "$SERVER_EXE" \
+# Use setsid to create a process group for clean shutdown of xvfb-run + wine tree
+setsid xvfb-run wine "$SERVER_EXE" \
     -console \
     -path "$WIN_CONFIG_DIR" &
 SERVER_PID=$!
 
 echo "=== Server started (PID: $SERVER_PID) ==="
 
-# Wait for server process (|| true prevents script exit on non-zero return)
-wait "$SERVER_PID" || true
+# Wait for server process and capture real exit code
+wait "$SERVER_PID"
 EXIT_CODE=$?
 
 # Clean up backup loop

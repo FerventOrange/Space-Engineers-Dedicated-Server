@@ -30,8 +30,10 @@ RUN apt-get update && \
         wine32 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install winetricks
-RUN wget -O /usr/local/bin/winetricks https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks && \
+# Install winetricks (pinned to release tag for reproducible builds)
+ARG WINETRICKS_TAG=20240105
+RUN wget -O /usr/local/bin/winetricks \
+      "https://raw.githubusercontent.com/Winetricks/winetricks/${WINETRICKS_TAG}/src/winetricks" && \
     chmod +x /usr/local/bin/winetricks
 
 # Create non-root steam user

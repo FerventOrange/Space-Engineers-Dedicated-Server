@@ -20,10 +20,19 @@ services:
       - ADMIN_IDS=${ADMIN_IDS:-}
       - MODS=${MODS:-}
       - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-6}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
       - AUTO_UPDATE=${AUTO_UPDATE:-true}
       - MAX_BACKUP_SAVES=${MAX_BACKUP_SAVES:-5}
       - STEAM_USER=${STEAM_USER:?STEAM_USER is required}
       - STEAM_PASS=${STEAM_PASS:?STEAM_PASS is required}
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '4.0'
+    pids_limit: 256
     stop_grace_period: 120s
     stdin_open: true
     tty: true

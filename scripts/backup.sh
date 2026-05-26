@@ -3,7 +3,7 @@ set -e
 
 WORLD_DIR="/server/world"
 BACKUP_DIR="/server/backups"
-RETENTION_DAYS=7
+RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="$BACKUP_DIR/world_backup_${TIMESTAMP}.tar.gz"
@@ -21,5 +21,5 @@ echo "Backup created: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
 
 # Clean up old backups
 echo "=== Removing backups older than ${RETENTION_DAYS} days ==="
-find "$BACKUP_DIR" -name "world_backup_*.tar.gz" -mtime +${RETENTION_DAYS} -delete -print
+find "$BACKUP_DIR" -maxdepth 1 -name "world_backup_*.tar.gz" -mtime +${RETENTION_DAYS} -delete -print
 echo "=== Backup complete ==="

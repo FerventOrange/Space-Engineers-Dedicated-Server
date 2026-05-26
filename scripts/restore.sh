@@ -18,8 +18,15 @@ if [ -z "$1" ]; then
     exit 0
 fi
 
+# Reject absolute paths or path traversal in the argument
+if [[ "$1" == /* ]] || [[ "$1" == *..* ]]; then
+    echo "Error: Invalid backup filename (must not contain absolute paths or '..')"
+    exit 1
+fi
+
+RESOLVED_BACKUP_DIR="$(realpath "$BACKUP_DIR")"
 BACKUP_FILE="$(realpath -m "$BACKUP_DIR/$1")"
-if [[ "$BACKUP_FILE" != "$BACKUP_DIR/"* ]]; then
+if [[ "$BACKUP_FILE" != "$RESOLVED_BACKUP_DIR/"* ]]; then
     echo "Error: Invalid backup path (must be within $BACKUP_DIR)"
     exit 1
 fi
