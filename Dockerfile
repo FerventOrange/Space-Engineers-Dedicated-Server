@@ -31,7 +31,7 @@ RUN apt-get update && \
     && rm -rf /var/lib/apt/lists/*
 
 # Install winetricks (pinned to release tag for reproducible builds)
-ARG WINETRICKS_TAG=20240105
+ARG WINETRICKS_TAG=20260125
 RUN wget -O /usr/local/bin/winetricks \
       "https://raw.githubusercontent.com/Winetricks/winetricks/${WINETRICKS_TAG}/src/winetricks" && \
     chmod +x /usr/local/bin/winetricks
