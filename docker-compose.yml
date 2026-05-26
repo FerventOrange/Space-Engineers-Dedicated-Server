@@ -11,6 +11,8 @@ services:
       - ./data/backups:/server/backups
       - ./data/mods:/server/mods
       - ./data/server-install:/server/install
+      - ./data/steam-cache:/home/steam/Steam
+      - ./init.sh:/server/init.sh
     environment:
       - SERVER_NAME=${SERVER_NAME:-Space Engineers Server}
       - WORLD_NAME=${WORLD_NAME:-Star System}
