@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-WORLD_DIR="/server/world"
-BACKUP_DIR="/server/backups"
+WORLD_DIR="${WORLD_DIR:-/server/world}"
+BACKUP_DIR="${BACKUP_DIR:-/server/backups}"
 
 # If no argument, list available backups
 if [ -z "$1" ]; then

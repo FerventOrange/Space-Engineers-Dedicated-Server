@@ -57,7 +57,7 @@
     <SyncDistance>3000</SyncDistance>
     <EnableAutorespawn>false</EnableAutorespawn>
   </SessionSettings>
-  <LoadWorld>Z:\server\world\${WORLD_NAME}</LoadWorld>
+  <LoadWorld>Z:\server\config\Saves\${WORLD_NAME}</LoadWorld>
   <PremadeCheckpointPath>Z:\server\install\Content\CustomWorlds\${WORLD_NAME}</PremadeCheckpointPath>
   <IP>0.0.0.0</IP>
   <ServerPort>${SERVER_PORT}</ServerPort>

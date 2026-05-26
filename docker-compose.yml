@@ -6,7 +6,7 @@ services:
     ports:
       - "27016:27016/udp"
     volumes:
-      - ./data/world:/server/world
+      - ./world:/server/world
       - ./data/config:/server/config
       - ./data/backups:/server/backups
       - ./data/mods:/server/mods
@@ -21,6 +21,8 @@ services:
       - MODS=${MODS:-}
       - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-6}
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - WORLD_DIR=${WORLD_DIR:-/server/world}
+      - BACKUP_DIR=${BACKUP_DIR:-/server/backups}
       - AUTO_UPDATE=${AUTO_UPDATE:-true}
       - MAX_BACKUP_SAVES=${MAX_BACKUP_SAVES:-5}
       - STEAM_USER=${STEAM_USER:?STEAM_USER is required}
