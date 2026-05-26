@@ -129,19 +129,25 @@ if [ ! -f "$CONFIG_FILE" ]; then
     echo "Config written to $CONFIG_FILE"
 fi
 
-# Download Workshop mods if MODS env var is set
+# Download Workshop mods if MODS env var is set (single SteamCMD session)
 if [ -n "$MODS" ]; then
     echo "=== Downloading Workshop mods ==="
     IFS=',' read -ra MOD_IDS <<< "$MODS"
+
+    # Build a single SteamCMD command with all workshop downloads
+    WORKSHOP_ARGS=""
     for MOD_ID in "${MOD_IDS[@]}"; do
         MOD_ID=$(echo "$MOD_ID" | tr -d ' ')
-        echo "Downloading mod: $MOD_ID"
-        /server/steamcmd/steamcmd.sh \
-            +force_install_dir /server/mods \
-            +login "$STEAM_USER" "$STEAM_PASS" \
-            +workshop_download_item 244850 "$MOD_ID" \
-            +quit || echo "Warning: Failed to download mod $MOD_ID (may require auth)"
+        echo "  - Mod: $MOD_ID"
+        WORKSHOP_ARGS="$WORKSHOP_ARGS +workshop_download_item 244850 $MOD_ID"
     done
+
+    /server/steamcmd/steamcmd.sh \
+        +force_install_dir /server/mods \
+        +login "$STEAM_USER" "$STEAM_PASS" \
+        $WORKSHOP_ARGS \
+        +quit || echo "Warning: Some mods may have failed to download"
+
     echo "=== Mod download complete ==="
 fi
 
