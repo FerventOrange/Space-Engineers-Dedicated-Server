@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-WORLD_DIR="/server/world"
-BACKUP_DIR="/server/backups"
+WORLD_DIR="${WORLD_DIR:-/server/world}"
+BACKUP_DIR="${BACKUP_DIR:-/server/backups}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-7}"
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)

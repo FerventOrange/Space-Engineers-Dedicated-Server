@@ -6,13 +6,16 @@ services:
     ports:
       - "27016:27016/udp"
     volumes:
-      - ./data/world:/server/world
+      - ./world:/server/world
       - ./data/config:/server/config
       - ./data/backups:/server/backups
       - ./data/mods:/server/mods
       - ./data/server-install:/server/install
       - ./data/steam-cache:/home/steam/Steam
       - ./init.sh:/server/init.sh
+      - ./entrypoint.sh:/server/entrypoint.sh
+      - ./scripts:/server/scripts
+      - ./config:/server/config-templates
     environment:
       - SERVER_NAME=${SERVER_NAME:-Space Engineers Server}
       - WORLD_NAME=${WORLD_NAME:-Star System}
@@ -21,6 +24,8 @@ services:
       - MODS=${MODS:-}
       - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-6}
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - WORLD_DIR=${WORLD_DIR:-/server/world}
+      - BACKUP_DIR=${BACKUP_DIR:-/server/backups}
       - AUTO_UPDATE=${AUTO_UPDATE:-true}
       - MAX_BACKUP_SAVES=${MAX_BACKUP_SAVES:-5}
       - STEAM_USER=${STEAM_USER:?STEAM_USER is required}
@@ -31,8 +36,8 @@ services:
       resources:
         limits:
           memory: 8G
-          cpus: '4.0'
-    pids_limit: 256
+          cpus: '2.0'
+          pids: 256
     stop_grace_period: 120s
     stdin_open: true
     tty: true

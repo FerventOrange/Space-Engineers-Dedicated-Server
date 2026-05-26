@@ -1,4 +1,6 @@
 data/
+world/
 *.tar.gz
 .env
 .env.*
+!.env.example

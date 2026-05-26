@@ -2,7 +2,7 @@
 
 INSTALL_DIR="/server/install"
 CONFIG_DIR="/server/config"
-WORLD_DIR="/server/world"
+WORLD_DIR="${WORLD_DIR:-/server/world}"
 TEMPLATE_DIR="/server/config-templates"
 BACKUP_INTERVAL_HOURS="${BACKUP_INTERVAL_HOURS:-6}"
 AUTO_UPDATE="${AUTO_UPDATE:-true}"
@@ -165,6 +165,13 @@ backup_loop() {
 backup_loop &
 BACKUP_PID=$!
 echo "=== Backup loop started (every ${BACKUP_INTERVAL_HOURS}h, PID: $BACKUP_PID) ==="
+
+# Redirect SE saves to the world volume
+# SE saves to {-path}/Saves/{WorldName}/ — symlink Saves → world volume
+if [ ! -L "$CONFIG_DIR/Saves" ]; then
+    rm -rf "$CONFIG_DIR/Saves"
+    ln -sfn "$WORLD_DIR" "$CONFIG_DIR/Saves"
+fi
 
 # Find the server executable
 SERVER_EXE="$INSTALL_DIR/DedicatedServer64/SpaceEngineersDedicated.exe"
