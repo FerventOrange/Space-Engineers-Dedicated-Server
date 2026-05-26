@@ -13,6 +13,9 @@ services:
       - ./data/server-install:/server/install
       - ./data/steam-cache:/home/steam/Steam
       - ./init.sh:/server/init.sh
+      - ./entrypoint.sh:/server/entrypoint.sh
+      - ./scripts:/server/scripts
+      - ./config:/server/config-templates
     environment:
       - SERVER_NAME=${SERVER_NAME:-Space Engineers Server}
       - WORLD_NAME=${WORLD_NAME:-Star System}
