@@ -58,6 +58,7 @@
     <EnableAutorespawn>false</EnableAutorespawn>
   </SessionSettings>
   <LoadWorld>Z:\server\world\${WORLD_NAME}</LoadWorld>
+  <PremadeCheckpointPath>Z:\server\install\Content\CustomWorlds\${WORLD_NAME}</PremadeCheckpointPath>
   <IP>0.0.0.0</IP>
   <ServerPort>${SERVER_PORT}</ServerPort>
   <ServerName>${SERVER_NAME}</ServerName>
