@@ -12,10 +12,10 @@ services:
       - ./data/mods:/server/mods
       - ./data/server-install:/server/install
       - ./data/steam-cache:/home/steam/Steam
-      - ./init.sh:/server/init.sh
-      - ./entrypoint.sh:/server/entrypoint.sh
-      - ./scripts:/server/scripts
-      - ./config:/server/config-templates
+      - ./init.sh:/server/init.sh:ro
+      - ./entrypoint.sh:/server/entrypoint.sh:ro
+      - ./scripts:/server/scripts:ro
+      - ./config:/server/config-templates:ro
     environment:
       - SERVER_NAME=${SERVER_NAME:-Space Engineers Server}
       - WORLD_NAME=${WORLD_NAME:-Star System}
@@ -24,6 +24,7 @@ services:
       - MODS=${MODS:-}
       - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-6}
       - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - BACKUP_ENABLED=${BACKUP_ENABLED:-true}
       - WORLD_DIR=${WORLD_DIR:-/server/world}
       - BACKUP_DIR=${BACKUP_DIR:-/server/backups}
       - AUTO_UPDATE=${AUTO_UPDATE:-true}
@@ -45,7 +46,7 @@ services:
         limits:
           memory: 8G
           cpus: '2.0'
-          pids: 256
+          pids: 512
     stop_grace_period: 120s
     stdin_open: true
     tty: true
