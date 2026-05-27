@@ -47,6 +47,8 @@ Set these in a `.env` file or pass them to `docker compose`:
 | `BACKUP_INTERVAL_HOURS` | `6` | Hours between automatic world backups |
 | `BACKUP_RETENTION_DAYS` | `7` | Number of days to keep backup files before automatic deletion |
 | `MAX_BACKUP_SAVES` | `5` | Max in-game backup saves retained by the server |
+| `WORLD_DIR` | `/server/world` | World save directory inside the container |
+| `BACKUP_DIR` | `/server/backups` | Backup directory inside the container |
 
 Example `.env` file:
 
@@ -83,7 +85,7 @@ docker compose restart
 
 ### Server Configuration
 
-The server config is generated on first run at `data/config/SpaceEngineers-Dedicated.cfg`. After the first run, edit this file directly to customize game settings. Changes take effect on restart.
+The server config is generated on first run at `data/config/SpaceEngineers-Dedicated.cfg`. This file controls initial server settings (name, port, admins). After the first run you can edit it directly; changes take effect on restart.
 
 To regenerate the config from the template (losing any manual edits):
 
@@ -91,6 +93,31 @@ To regenerate the config from the template (losing any manual edits):
 rm data/config/SpaceEngineers-Dedicated.cfg
 docker compose restart
 ```
+
+### Changing Game Settings (Multipliers, etc.)
+
+**Important:** SE stores session settings in the **world save**, not the server config. Once a world exists, the server config is only used for initial world creation. To change gameplay settings like multipliers:
+
+1. Stop the server: `docker compose stop`
+2. Edit **both** save files in `world/<WorldName>/`:
+   - `Sandbox.sbc` — the world checkpoint
+   - `Sandbox_config.sbc` — **this file overrides `Sandbox.sbc`** and is what SE actually reads
+3. Start the server: `docker compose up -d`
+
+Common settings in `Sandbox_config.sbc`:
+
+```xml
+<InventorySizeMultiplier>10</InventorySizeMultiplier>
+<BlocksInventorySizeMultiplier>10</BlocksInventorySizeMultiplier>
+<AssemblerSpeedMultiplier>10</AssemblerSpeedMultiplier>
+<AssemblerEfficiencyMultiplier>10</AssemblerEfficiencyMultiplier>
+<RefinerySpeedMultiplier>10</RefinerySpeedMultiplier>
+<WelderSpeedMultiplier>5</WelderSpeedMultiplier>
+<GrinderSpeedMultiplier>5</GrinderSpeedMultiplier>
+<HarvestRatioMultiplier>5</HarvestRatioMultiplier>
+```
+
+**You must edit the files while the server is stopped.** If you edit them while the server is running, SE will overwrite your changes when it auto-saves or shuts down.
 
 ## Backups
 
@@ -117,7 +144,7 @@ Restore directly from the host (the backup files are in `data/backups/`):
 ```bash
 docker compose stop
 # Extract backup into the world directory
-tar -xzf data/backups/world_backup_20250101_120000.tar.gz -C data/world/
+tar -xzf data/backups/world_backup_20250101_120000.tar.gz -C world/
 docker compose start
 ```
 
@@ -139,47 +166,109 @@ Set the `MODS` environment variable with comma-separated Steam Workshop IDs:
 MODS=754173702,857053359
 ```
 
-Mods are downloaded on container start via SteamCMD using your Steam credentials. Mods are also added to the server config XML automatically when the config is first generated.
+Mods are downloaded on container start via SteamCMD into the Steam library path (`/home/steam/Steam/steamapps/workshop/`). Mods are also added to the server config XML automatically when the config is first generated.
+
+### How Mods Load
+
+1. **SteamCMD** pre-downloads mod files on container start (reliable)
+2. **SE's internal Steam client** verifies/downloads mods when loading the world (can be unreliable in Wine)
+
+For SE to load mods, they must be listed in **both** the server config and the world save files:
+- `data/config/SpaceEngineers-Dedicated.cfg` — `<Mods>` section (generated from `MODS` env var on first run)
+- `world/<WorldName>/Sandbox.sbc` — `<Mods>` section
+- `world/<WorldName>/Sandbox_config.sbc` — `<Mods>` section (overrides Sandbox.sbc)
+
+### Adding Mods to an Existing World
+
+If you add mods after world creation, you need to manually add them to `Sandbox_config.sbc` and `Sandbox.sbc`:
+
+```xml
+<Mods>
+  <ModItem FriendlyName="" Name="754173702.sbm">
+    <PublishedFileId>754173702</PublishedFileId>
+    <PublishedServiceName>Steam</PublishedServiceName>
+  </ModItem>
+</Mods>
+```
+
+### Legacy Mods (Known Issue)
+
+Some older Steam Workshop mods use a legacy UGC download format (`manifest: -1` in the workshop ACF). SE's internal Steam client **cannot reliably download these mods** in a Wine/Docker environment — they will timeout and crash the server in a loop.
+
+To identify legacy mods, check the workshop manifest after SteamCMD downloads them:
+
+```bash
+docker exec se-server grep -B1 '"manifest".*"-1"' \
+  /home/steam/Steam/steamapps/workshop/appworkshop_244850.acf
+```
+
+**Workaround:** Remove legacy mods from the `MODS` env var and from both `Sandbox.sbc`/`Sandbox_config.sbc`. The server will load successfully with the remaining mods.
 
 ## Ports
 
 | Port | Protocol | Description |
 |---|---|---|
-| 27016 | UDP | Game server port |
+| `SERVER_PORT` (default 27016) | UDP | Game server port |
 
-Ensure this port is forwarded in your firewall/router for external access. For a private server (direct connect only), port forwarding is still required but the server won't appear in the public server browser.
+The port mapping in `docker-compose.yml` uses `${SERVER_PORT}` so the host port and container port always match. This is important because SE advertises the internal port to Steam — if the host and container ports differ, players cannot connect.
+
+### Port Forwarding
+
+For external access, forward the `SERVER_PORT` (UDP) on your router to your server's LAN IP. **The external port, router forwarding port, and `SERVER_PORT` must all match.**
+
+Example with `SERVER_PORT=61072`:
+- Router: forward UDP 61072 → `<server-LAN-IP>`:61072
+- Players connect to: `your.domain:61072`
+
+> **Important:** Ensure the port forward is **UDP**, not TCP. SE uses UDP exclusively for game traffic.
 
 ## Data Persistence
 
-All persistent data is stored in the `data/` directory:
+Persistent data is split between `data/` and `world/`:
 
 ```
+world/                # World save files (at repo root for easy access)
+└── Star System/
+    ├── Sandbox.sbc
+    ├── Sandbox_config.sbc   ← SE reads settings from here
+    └── ...
+
 data/
-├── world/           # World save files
 ├── config/          # Server configuration
 ├── backups/         # World backups (timestamped tar.gz)
-├── mods/            # Downloaded Workshop mods
+├── mods/            # Downloaded Workshop mods (legacy path)
 ├── server-install/  # SE dedicated server binaries (cached)
-└── steam-cache/     # Steam auth session cache (persists Steam Guard tokens)
+└── steam-cache/     # Steam auth session + workshop downloads
 ```
 
-This directory is git-ignored and persists across container rebuilds.
+Both directories are git-ignored and persist across container rebuilds.
 
 ### Volume Mounts
 
-The `docker-compose.yml` maps the following volumes:
-
 | Host Path | Container Path | Purpose |
 |---|---|---|
-| `./data/world` | `/server/world` | World save files |
+| `./world` | `/server/world` | World save files |
 | `./data/config` | `/server/config` | Server configuration |
 | `./data/backups` | `/server/backups` | World backup archives |
-| `./data/mods` | `/server/mods` | Downloaded Workshop mods |
+| `./data/mods` | `/server/mods` | Downloaded Workshop mods (legacy) |
 | `./data/server-install` | `/server/install` | SE server binaries |
-| `./data/steam-cache` | `/home/steam/Steam` | Steam auth cache (Guard tokens, session data) |
-| `./init.sh` | `/server/init.sh` | Init script (bind-mounted for easy updates) |
+| `./data/steam-cache` | `/home/steam/Steam` | Steam auth cache, workshop downloads |
+| `./init.sh` | `/server/init.sh` | Init script (bind-mounted) |
+| `./entrypoint.sh` | `/server/entrypoint.sh` | Entrypoint script (bind-mounted) |
+| `./scripts` | `/server/scripts` | Utility scripts (bind-mounted) |
+| `./config` | `/server/config-templates` | Config templates (bind-mounted) |
 
-The `init.sh` script is bind-mounted from the project root so that changes to the init logic take effect immediately on the next container start without requiring an image rebuild.
+Scripts are bind-mounted from the project root so that changes take effect immediately on container restart without requiring an image rebuild.
+
+### World Save Symlink
+
+SE saves worlds to `{-path}/Saves/{WorldName}/`. The entrypoint creates a symlink:
+
+```
+/server/config/Saves → /server/world
+```
+
+This redirects SE's save path into the `./world` volume on the host.
 
 ## Container Security
 
@@ -189,7 +278,7 @@ The `docker-compose.yml` includes several security hardening measures:
 |---|---|---|
 | `security_opt` | `no-new-privileges:true` | Prevents processes from gaining additional privileges via setuid/setgid |
 | `memory` | `8G` | Caps container memory usage |
-| `cpus` | `4.0` | Caps container CPU usage |
+| `cpus` | `2.0` | Caps container CPU usage (adjust to match your host) |
 | `pids_limit` | `256` | Limits the number of processes to prevent fork bombs |
 | `stop_grace_period` | `120s` | Allows time for the server to save and shut down cleanly |
 
@@ -197,7 +286,7 @@ The `docker-compose.yml` includes several security hardening measures:
 
 The Dockerfile pins external dependencies to specific versions for reproducible builds:
 
-- **Winetricks** is pinned to release `20240105` via the `WINETRICKS_TAG` build argument. To update, change the `ARG WINETRICKS_TAG` value in the Dockerfile and rebuild.
+- **Winetricks** is pinned to release `20260125` via the `WINETRICKS_TAG` build argument. To update, change the `ARG WINETRICKS_TAG` value in the Dockerfile and rebuild.
 - **Wine 8** (stable) is installed from Debian Bookworm repositories.
 - **Base image** uses `debian:bookworm-slim`.
 
@@ -214,10 +303,56 @@ The server binaries in `data/server-install/` are preserved across rebuilds, so 
 
 ## Troubleshooting
 
-- **Server won't start:** Check logs with `docker compose logs`. Wine/.NET issues may require a full rebuild.
-- **Steam Guard prompt on every start:** Ensure `./data/steam-cache` is mapped as a volume (check `docker-compose.yml`). The directory must persist between runs.
-- **Mod download fails:** Mods require Steam authentication. Verify your credentials are correct and that the mod IDs are valid.
-- **Performance issues:** Adjust `MaxPlayers`, `ViewDistance`, `SyncDistance`, and PCU limits in the config file. The container is limited to 8 GB memory and 4 CPUs by default; adjust `deploy.resources.limits` in `docker-compose.yml` if needed.
-- **Port conflicts:** Change `SERVER_PORT` and update the port mapping in `docker-compose.yml`.
-- **Container hits PID limit:** The default `pids_limit` of 256 is generous for normal operation. If you see "cannot allocate" errors, increase it in `docker-compose.yml`.
-- **Shutdown takes too long:** The 120-second grace period should be sufficient. If the server hangs, Docker will force-kill it after this period.
+### Server won't start
+
+Check logs with `docker compose logs`. Common causes:
+
+- **Wine/.NET issues:** May require a full image rebuild (`docker compose build --no-cache`). The `dotnet48` winetricks install is the most fragile step.
+- **"World not found" or premade world error:** The `WORLD_NAME` must match an SE premade world exactly (e.g., `Star System` with a space, not `StarSystem`). If wrong, delete `data/config/SpaceEngineers-Dedicated.cfg` and restart.
+
+### Settings changes not taking effect
+
+SE loads session settings from `world/<WorldName>/Sandbox_config.sbc`, **not** from `SpaceEngineers-Dedicated.cfg`. You must:
+
+1. **Stop the server first** — if you edit files while running, SE overwrites them on save/shutdown
+2. **Edit `Sandbox_config.sbc`** (this is the file that matters)
+3. **Also edit `Sandbox.sbc`** for consistency (SE may fall back to it)
+
+### Config not regenerating after .env changes
+
+The server config (`SpaceEngineers-Dedicated.cfg`) is only generated if the file doesn't exist. If you change `.env` values like `WORLD_NAME` or `SERVER_PORT`, you must delete the config to trigger regeneration:
+
+```bash
+docker compose stop
+rm data/config/SpaceEngineers-Dedicated.cfg
+docker compose up -d
+```
+
+### Players can't connect
+
+- **Port mismatch:** `SERVER_PORT` in `.env`, the Docker port mapping, and the router port forward must all use the **same port number**. SE advertises the internal port to Steam, so mismatched ports (e.g., external 61072 → internal 27016) will not work.
+- **UDP not enabled:** Ensure your router port forward is **UDP**, not TCP.
+- **Docker listening on wrong port:** After changing `SERVER_PORT`, verify with `ss -ulnp | grep <port>` that Docker is actually listening on the new port. You may need `docker compose down && docker compose up -d` (not just restart) for port changes to take effect.
+
+### Mods not loading
+
+- Mods must be listed in `Sandbox_config.sbc` and `Sandbox.sbc` `<Mods>` sections, not just in `.env`.
+- Adding `MODS` to `.env` only affects the **initial** config generation and SteamCMD pre-download. For an existing world, you must manually add mods to the save files.
+- **Crash loop from mod timeouts:** SE's internal Steam client may fail to download certain mods in Wine. Check `docker compose logs | grep "Mod failed"`. Legacy-format mods (see [Legacy Mods](#legacy-mods-known-issue)) are the most common cause.
+
+### Steam Guard prompt on every start
+
+Ensure `./data/steam-cache` is mapped as a volume (check `docker-compose.yml`). The directory must persist between runs.
+
+### Docker Compose v5 compatibility
+
+- `pids_limit` must be under `deploy.resources.limits.pids`, not as a top-level service key.
+- `cpus` must not exceed the host's actual CPU count or Docker will reject the compose file.
+
+### Performance issues
+
+Adjust `MaxPlayers`, `ViewDistance`, `SyncDistance`, and PCU limits in `Sandbox_config.sbc`. The container is limited to 8 GB memory and 2 CPUs by default; adjust `deploy.resources.limits` in `docker-compose.yml` if needed.
+
+### Shutdown takes too long
+
+The 120-second grace period should be sufficient. If the server hangs, Docker will force-kill it after this period.
