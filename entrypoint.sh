@@ -145,7 +145,7 @@ if [ -n "$MODS" ]; then
     done
 
     /server/steamcmd/steamcmd.sh \
-        +force_install_dir /server/mods \
+        +force_install_dir /home/steam/Steam \
         +login "$STEAM_USER" "$STEAM_PASS" \
         "${WORKSHOP_ARGS[@]}" \
         +quit || echo "Warning: Some mods may have failed to download"
