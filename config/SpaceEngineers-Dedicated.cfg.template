@@ -2,6 +2,14 @@
 <MyConfigDedicated xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <SessionSettings>
     <GameMode>Survival</GameMode>
+    <InventorySizeMultiplier>${INVENTORY_SIZE_MULTIPLIER}</InventorySizeMultiplier>
+    <BlocksInventorySizeMultiplier>${BLOCKS_INVENTORY_SIZE_MULTIPLIER}</BlocksInventorySizeMultiplier>
+    <AssemblerSpeedMultiplier>${ASSEMBLER_SPEED_MULTIPLIER}</AssemblerSpeedMultiplier>
+    <AssemblerEfficiencyMultiplier>${ASSEMBLER_EFFICIENCY_MULTIPLIER}</AssemblerEfficiencyMultiplier>
+    <RefinerySpeedMultiplier>${REFINERY_SPEED_MULTIPLIER}</RefinerySpeedMultiplier>
+    <WelderSpeedMultiplier>${WELDER_SPEED_MULTIPLIER}</WelderSpeedMultiplier>
+    <GrinderSpeedMultiplier>${GRINDER_SPEED_MULTIPLIER}</GrinderSpeedMultiplier>
+    <HarvestRatioMultiplier>${HARVEST_RATIO_MULTIPLIER}</HarvestRatioMultiplier>
     <InfiniteAmmo>false</InfiniteAmmo>
     <EnableToolShake>true</EnableToolShake>
     <MaxPlayers>16</MaxPlayers>

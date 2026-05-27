@@ -39,16 +39,24 @@ Set these in a `.env` file or pass them to `docker compose`:
 | `STEAM_USER` | *(required)* | Steam account username for SteamCMD |
 | `STEAM_PASS` | *(required)* | Steam account password for SteamCMD |
 | `SERVER_NAME` | `Space Engineers Server` | Server name shown in server browser |
-| `WORLD_NAME` | `Star System` | World/save name |
+| `WORLD_NAME` | `Star System` | World/save name (see [Custom Maps](#custom-maps)) |
 | `SERVER_PORT` | `27016` | Game port (UDP) |
 | `ADMIN_IDS` | *(empty)* | Comma-separated Steam64 IDs for admin access |
 | `MODS` | *(empty)* | Comma-separated Steam Workshop mod IDs |
 | `AUTO_UPDATE` | `true` | Update SE server on every container start |
 | `BACKUP_INTERVAL_HOURS` | `6` | Hours between automatic world backups |
 | `BACKUP_RETENTION_DAYS` | `7` | Number of days to keep backup files before automatic deletion |
-| `MAX_BACKUP_SAVES` | `5` | Max in-game backup saves retained by the server |
+| `MAX_BACKUP_SAVES` | `28` | Max in-game backup saves retained by the server |
 | `WORLD_DIR` | `/server/world` | World save directory inside the container |
 | `BACKUP_DIR` | `/server/backups` | Backup directory inside the container |
+| `INVENTORY_SIZE_MULTIPLIER` | `10` | Player inventory size multiplier |
+| `BLOCKS_INVENTORY_SIZE_MULTIPLIER` | `10` | Block inventory size multiplier (cargo containers, etc.) |
+| `ASSEMBLER_SPEED_MULTIPLIER` | `10` | Assembler crafting speed multiplier |
+| `ASSEMBLER_EFFICIENCY_MULTIPLIER` | `10` | Assembler material efficiency multiplier |
+| `REFINERY_SPEED_MULTIPLIER` | `10` | Refinery processing speed multiplier |
+| `WELDER_SPEED_MULTIPLIER` | `5` | Welder speed multiplier |
+| `GRINDER_SPEED_MULTIPLIER` | `5` | Grinder speed multiplier |
+| `HARVEST_RATIO_MULTIPLIER` | `5` | Ore yield from mining multiplier |
 
 Example `.env` file:
 
@@ -57,10 +65,16 @@ STEAM_USER=your_steam_username
 STEAM_PASS=your_steam_password
 SERVER_NAME=My SE Server
 WORLD_NAME=Star System
+SERVER_PORT=27016
 ADMIN_IDS=76561198000000001,76561198000000002
 MODS=754173702,857053359
 BACKUP_RETENTION_DAYS=14
+INVENTORY_SIZE_MULTIPLIER=10
+REFINERY_SPEED_MULTIPLIER=10
+HARVEST_RATIO_MULTIPLIER=5
 ```
+
+> **Note:** Multiplier env vars are only applied during **initial config generation** (first run). To change multipliers on an existing world, see [Changing Game Settings](#changing-game-settings-multipliers-etc).
 
 ## Server Management
 
@@ -118,6 +132,30 @@ Common settings in `Sandbox_config.sbc`:
 ```
 
 **You must edit the files while the server is stopped.** If you edit them while the server is running, SE will overwrite your changes when it auto-saves or shuts down.
+
+### Custom Maps
+
+The `WORLD_NAME` must match one of SE's built-in premade worlds **exactly** (including spaces). On first run, SE copies the premade world from `Content/CustomWorlds/<WORLD_NAME>` into the save directory. If the name doesn't match, the server will crash with a "world not found" error.
+
+Available premade worlds:
+
+- `Star System` (default)
+- `Easy Start 1`
+- `Easy Start 2`
+- `Lone Survivor`
+- `Crashed Red Ship`
+- `Two Platforms`
+- `Asteroids`
+- `Empty World`
+
+To use a custom/uploaded world instead of a premade one:
+
+1. Set `WORLD_NAME` to `Star System` (or any valid premade name) for the initial run
+2. Let the server create the world and then stop it
+3. Replace the contents of `world/<WorldName>/` with your custom world files
+4. Restart the server
+
+> **Warning:** Using a non-existent world name (e.g., `StarSystem` instead of `Star System`) will cause the container to crash-loop on startup.
 
 ## Backups
 
@@ -216,9 +254,9 @@ The port mapping in `docker-compose.yml` uses `${SERVER_PORT}` so the host port 
 
 For external access, forward the `SERVER_PORT` (UDP) on your router to your server's LAN IP. **The external port, router forwarding port, and `SERVER_PORT` must all match.**
 
-Example with `SERVER_PORT=61072`:
-- Router: forward UDP 61072 → `<server-LAN-IP>`:61072
-- Players connect to: `your.domain:61072`
+Example with `SERVER_PORT=27020`:
+- Router: forward UDP 27020 → `<server-LAN-IP>`:27020
+- Players connect to: `your.domain:27020`
 
 > **Important:** Ensure the port forward is **UDP**, not TCP. SE uses UDP exclusively for game traffic.
 
@@ -330,7 +368,7 @@ docker compose up -d
 
 ### Players can't connect
 
-- **Port mismatch:** `SERVER_PORT` in `.env`, the Docker port mapping, and the router port forward must all use the **same port number**. SE advertises the internal port to Steam, so mismatched ports (e.g., external 61072 → internal 27016) will not work.
+- **Port mismatch:** `SERVER_PORT` in `.env`, the Docker port mapping, and the router port forward must all use the **same port number**. SE advertises the internal port to Steam, so mismatched ports (e.g., external 27020 → internal 27016) will not work.
 - **UDP not enabled:** Ensure your router port forward is **UDP**, not TCP.
 - **Docker listening on wrong port:** After changing `SERVER_PORT`, verify with `ss -ulnp | grep <port>` that Docker is actually listening on the new port. You may need `docker compose down && docker compose up -d` (not just restart) for port changes to take effect.
 
