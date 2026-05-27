@@ -4,7 +4,7 @@ services:
     container_name: se-server
     restart: unless-stopped
     ports:
-      - "27016:27016/udp"
+      - "${SERVER_PORT:-27016}:${SERVER_PORT:-27016}/udp"
     volumes:
       - ./world:/server/world
       - ./data/config:/server/config
