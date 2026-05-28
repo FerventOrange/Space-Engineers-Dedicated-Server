@@ -86,6 +86,7 @@ export REFINERY_SPEED_MULTIPLIER="${REFINERY_SPEED_MULTIPLIER:-10}"
 export WELDER_SPEED_MULTIPLIER="${WELDER_SPEED_MULTIPLIER:-5}"
 export GRINDER_SPEED_MULTIPLIER="${GRINDER_SPEED_MULTIPLIER:-5}"
 export HARVEST_RATIO_MULTIPLIER="${HARVEST_RATIO_MULTIPLIER:-5}"
+export SERVER_PASSWORD="${SERVER_PASSWORD:-}"
 
 validate_positive_integer "INVENTORY_SIZE_MULTIPLIER" "$INVENTORY_SIZE_MULTIPLIER"
 validate_positive_integer "BLOCKS_INVENTORY_SIZE_MULTIPLIER" "$BLOCKS_INVENTORY_SIZE_MULTIPLIER"
@@ -163,7 +164,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     # Apply envsubst for simple vars, write to temp file
     TMP_CONFIG=$(mktemp)
     CLEANUP_FILES+=("$TMP_CONFIG" "${TMP_CONFIG}.tmp")
-    envsubst '${SERVER_NAME} ${WORLD_NAME} ${SERVER_PORT} ${MAX_BACKUP_SAVES} ${INVENTORY_SIZE_MULTIPLIER} ${BLOCKS_INVENTORY_SIZE_MULTIPLIER} ${ASSEMBLER_SPEED_MULTIPLIER} ${ASSEMBLER_EFFICIENCY_MULTIPLIER} ${REFINERY_SPEED_MULTIPLIER} ${WELDER_SPEED_MULTIPLIER} ${GRINDER_SPEED_MULTIPLIER} ${HARVEST_RATIO_MULTIPLIER}' \
+    envsubst '${SERVER_NAME} ${WORLD_NAME} ${SERVER_PORT} ${MAX_BACKUP_SAVES} ${INVENTORY_SIZE_MULTIPLIER} ${BLOCKS_INVENTORY_SIZE_MULTIPLIER} ${ASSEMBLER_SPEED_MULTIPLIER} ${ASSEMBLER_EFFICIENCY_MULTIPLIER} ${REFINERY_SPEED_MULTIPLIER} ${WELDER_SPEED_MULTIPLIER} ${GRINDER_SPEED_MULTIPLIER} ${HARVEST_RATIO_MULTIPLIER} ${SERVER_PASSWORD}' \
         < "$TEMPLATE_DIR/SpaceEngineers-Dedicated.cfg.template" \
         > "$TMP_CONFIG"
 
@@ -324,6 +325,23 @@ d }" "$SAVE_CONFIG"
         echo "Mods updated in $SAVE_CONFIG"
     else
         echo "WARNING: No <Mods> section found in $SAVE_CONFIG — mods may not load"
+    fi
+fi
+
+# Inject server password into config if set (SE hashes and removes it on startup)
+if [ -n "$SERVER_PASSWORD" ]; then
+    CONFIG_FILE="$CONFIG_DIR/SpaceEngineers-Dedicated.cfg"
+    if [ -f "$CONFIG_FILE" ]; then
+        if grep -q '<ServerPassword>' "$CONFIG_FILE"; then
+            sed -i "s|<ServerPassword>.*</ServerPassword>|<ServerPassword>$SERVER_PASSWORD</ServerPassword>|" "$CONFIG_FILE"
+        elif grep -q '<ServerPasswordSalt>' "$CONFIG_FILE"; then
+            # SE already consumed a previous password — inject before the salt line
+            sed -i "/<ServerPasswordSalt>/i\\  <ServerPassword>$SERVER_PASSWORD</ServerPassword>" "$CONFIG_FILE"
+        else
+            # No password fields exist — inject before closing tag
+            sed -i "/<\\/MyConfigDedicated>/i\\  <ServerPassword>$SERVER_PASSWORD</ServerPassword>" "$CONFIG_FILE"
+        fi
+        echo "Server password configured"
     fi
 fi
 

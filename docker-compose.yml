@@ -20,6 +20,7 @@ services:
       - SERVER_NAME=${SERVER_NAME:-Space Engineers Server}
       - WORLD_NAME=${WORLD_NAME:-Star System}
       - SERVER_PORT=${SERVER_PORT:-27016}
+      - SERVER_PASSWORD=${SERVER_PASSWORD:-}
       - ADMIN_IDS=${ADMIN_IDS:-}
       - MODS=${MODS:-}
       - BACKUP_INTERVAL_HOURS=${BACKUP_INTERVAL_HOURS:-6}

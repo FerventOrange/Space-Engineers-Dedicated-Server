@@ -83,4 +83,5 @@
   </Mods>
   <GroupID>0</GroupID>
   <ServerDescription></ServerDescription>
+  <ServerPassword>${SERVER_PASSWORD}</ServerPassword>
 </MyConfigDedicated>
