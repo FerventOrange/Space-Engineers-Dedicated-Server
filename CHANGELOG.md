@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - PremadeCheckpointPath for new world creation so the server can find built-in world templates (`dbf4a0c`)
 - Volume mount for Steam auth cache (./data/steam-cache) so Steam Guard codes persist across container restarts (`82d5c86`)
 - BACKUP_RETENTION_DAYS environment variable for configurable backup retention (`37c73f5`)
+- `SERVER_PASSWORD` environment variable for server password protection; when set, the password is injected into the SE config before every launch so the engine hashes it on startup (`074c465`)
 - Resource limits in docker-compose: 8G memory, 4 CPUs, 256 pids limit (`37c73f5`)
 - no-new-privileges security option in docker-compose (`37c73f5`)
 - Process group management via setsid for clean SIGTERM propagation to Wine (`37c73f5`)
