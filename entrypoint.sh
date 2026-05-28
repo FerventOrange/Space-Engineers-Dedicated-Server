@@ -216,6 +216,51 @@ if [ -n "$MODS" ]; then
     /server/steamcmd/steamcmd.sh +runscript "$STEAM_SCRIPT" || echo "Warning: Some mods may have failed to download"
     rm -f "$STEAM_SCRIPT"
 
+    # Verify mod downloads and detect legacy mods
+    WORKSHOP_DIR="/home/steam/Steam/steamapps/workshop/content/244850"
+    ACF_FILE="/home/steam/Steam/steamapps/workshop/appworkshop_244850.acf"
+    FAILED_MODS=()
+    LEGACY_MODS=()
+
+    for MOD_ID in "${MOD_IDS[@]}"; do
+        MOD_ID=$(echo "$MOD_ID" | tr -d ' ')
+        if [ ! -d "$WORKSHOP_DIR/$MOD_ID" ]; then
+            FAILED_MODS+=("$MOD_ID")
+        fi
+    done
+
+    # Check ACF manifest for legacy mods (manifest: -1 means legacy UGC format)
+    if [ -f "$ACF_FILE" ]; then
+        for MOD_ID in "${MOD_IDS[@]}"; do
+            MOD_ID=$(echo "$MOD_ID" | tr -d ' ')
+            if grep -A2 "\"$MOD_ID\"" "$ACF_FILE" 2>/dev/null | grep -q '"manifest".*"-1"'; then
+                LEGACY_MODS+=("$MOD_ID")
+            fi
+        done
+    fi
+
+    if [ ${#FAILED_MODS[@]} -gt 0 ]; then
+        echo ""
+        echo "WARNING: The following mods failed to download:"
+        for MOD_ID in "${FAILED_MODS[@]}"; do
+            echo "  - $MOD_ID"
+        done
+        echo "Remove these IDs from the MODS variable in your .env file."
+        echo ""
+    fi
+
+    if [ ${#LEGACY_MODS[@]} -gt 0 ]; then
+        echo ""
+        echo "WARNING: The following mods use the legacy Workshop format and will"
+        echo "cause the server to crash-loop when it tries to load them:"
+        for MOD_ID in "${LEGACY_MODS[@]}"; do
+            echo "  - $MOD_ID"
+        done
+        echo "Remove these IDs from the MODS variable in your .env file and from"
+        echo "your world save files (Sandbox.sbc / Sandbox_config.sbc)."
+        echo ""
+    fi
+
     echo "=== Mod download complete ==="
 fi
 
