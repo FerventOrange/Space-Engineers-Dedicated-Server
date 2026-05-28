@@ -86,6 +86,7 @@ export REFINERY_SPEED_MULTIPLIER="${REFINERY_SPEED_MULTIPLIER:-10}"
 export WELDER_SPEED_MULTIPLIER="${WELDER_SPEED_MULTIPLIER:-5}"
 export GRINDER_SPEED_MULTIPLIER="${GRINDER_SPEED_MULTIPLIER:-5}"
 export HARVEST_RATIO_MULTIPLIER="${HARVEST_RATIO_MULTIPLIER:-5}"
+export SERVER_PASSWORD="${SERVER_PASSWORD:-}"
 
 validate_positive_integer "INVENTORY_SIZE_MULTIPLIER" "$INVENTORY_SIZE_MULTIPLIER"
 validate_positive_integer "BLOCKS_INVENTORY_SIZE_MULTIPLIER" "$BLOCKS_INVENTORY_SIZE_MULTIPLIER"
@@ -325,6 +326,31 @@ d }" "$SAVE_CONFIG"
     else
         echo "WARNING: No <Mods> section found in $SAVE_CONFIG — mods may not load"
     fi
+fi
+
+# Inject server password hash into config (SE requires pre-hashed PBKDF2 salt+hash)
+if [ -n "$SERVER_PASSWORD" ]; then
+    CONFIG_FILE="$CONFIG_DIR/SpaceEngineers-Dedicated.cfg"
+    if [ -f "$CONFIG_FILE" ]; then
+        # Generate PBKDF2-SHA1 hash (10000 iterations, 20-byte key, 16-byte salt)
+        read -r PW_SALT PW_HASH < <(python3 -c "
+import hashlib, base64, os
+salt = os.urandom(16)
+dk = hashlib.pbkdf2_hmac('sha1', '$SERVER_PASSWORD'.encode(), salt, 10000, dklen=20)
+print(base64.b64encode(salt).decode(), base64.b64encode(dk).decode())
+")
+
+        # Remove any existing password fields
+        sed -i '/<ServerPassword>/d; /<ServerPasswordSalt>/d; /<ServerPasswordHash>/d' "$CONFIG_FILE"
+
+        # Inject salt and hash before closing tag
+        sed -i "/<\/MyConfigDedicated>/i\\  <ServerPasswordSalt>$PW_SALT</ServerPasswordSalt>\n  <ServerPasswordHash>$PW_HASH</ServerPasswordHash>" "$CONFIG_FILE"
+        echo "Server password configured"
+    fi
+elif grep -q '<ServerPasswordSalt>' "$CONFIG_DIR/SpaceEngineers-Dedicated.cfg" 2>/dev/null; then
+    # Password was removed — clear existing hash fields
+    sed -i '/<ServerPasswordSalt>/d; /<ServerPasswordHash>/d' "$CONFIG_DIR/SpaceEngineers-Dedicated.cfg"
+    echo "Server password removed"
 fi
 
 # Find the server executable
