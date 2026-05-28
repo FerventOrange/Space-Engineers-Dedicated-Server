@@ -348,6 +348,14 @@ Check logs with `docker compose logs`. Common causes:
 - **Wine/.NET issues:** May require a full image rebuild (`docker compose build --no-cache`). The `dotnet48` winetricks install is the most fragile step.
 - **"World not found" or premade world error:** The `WORLD_NAME` must match an SE premade world exactly (e.g., `Star System` with a space, not `StarSystem`). If wrong, delete `data/config/SpaceEngineers-Dedicated.cfg` and restart.
 
+### New `.env` variables not taking effect after an update
+
+If you pull a project update that adds new environment variables to `docker-compose.yml` (e.g., `SERVER_PASSWORD`), a plain `docker compose restart` won't pick them up — it reuses the existing container definition. You must recreate the container:
+
+```bash
+docker compose down && docker compose up -d
+```
+
 ### Settings changes not taking effect
 
 SE loads session settings from `world/<WorldName>/Sandbox_config.sbc`, **not** from `SpaceEngineers-Dedicated.cfg`. You must:
