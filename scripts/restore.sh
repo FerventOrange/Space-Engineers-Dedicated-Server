@@ -45,11 +45,27 @@ fi
 echo "=== Restoring from: $BACKUP_FILE ==="
 echo "WARNING: This will overwrite the current world data."
 
+# Create safety backup of current world before overwriting
+SAFETY_BACKUP="$BACKUP_DIR/world_pre_restore_$(date +%Y%m%d_%H%M%S).tar.gz"
+if [ -n "$(ls -A "$WORLD_DIR" 2>/dev/null)" ]; then
+    echo "Creating safety backup: $SAFETY_BACKUP"
+    tar -czf "$SAFETY_BACKUP" -C "$WORLD_DIR" .
+fi
+
 # Clear existing world data
 rm -rf "${WORLD_DIR:?}"/*
 
-# Extract backup
-tar -xzf "$BACKUP_FILE" -C "$WORLD_DIR"
+# Extract backup with error handling — roll back on failure
+if ! tar -xzf "$BACKUP_FILE" -C "$WORLD_DIR"; then
+    echo "ERROR: Restore extraction failed!"
+    if [ -f "$SAFETY_BACKUP" ]; then
+        echo "Rolling back to safety backup..."
+        rm -rf "${WORLD_DIR:?}"/*
+        tar -xzf "$SAFETY_BACKUP" -C "$WORLD_DIR"
+        echo "Rollback complete. World restored to pre-restore state."
+    fi
+    exit 1
+fi
 
 echo "=== Restore complete ==="
 echo "Start the server to use the restored world."

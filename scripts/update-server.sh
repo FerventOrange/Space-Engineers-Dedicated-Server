@@ -17,11 +17,19 @@ echo "--- Checking for SteamCMD updates ---"
 "$STEAMCMD_DIR/steamcmd.sh" +quit || true
 
 echo "--- Downloading/updating SE server ---"
-"$STEAMCMD_DIR/steamcmd.sh" \
-    +@sSteamCmdForcePlatformType windows \
-    +force_install_dir "$INSTALL_DIR" \
-    +login "$STEAM_USER" "$STEAM_PASS" \
-    +app_update "$APP_ID" validate \
-    +quit
+
+# Use runscript to avoid exposing credentials on the command line
+STEAM_SCRIPT=$(mktemp)
+chmod 600 "$STEAM_SCRIPT"
+cat > "$STEAM_SCRIPT" <<SCRIPT
+@sSteamCmdForcePlatformType windows
+force_install_dir $INSTALL_DIR
+login $STEAM_USER $STEAM_PASS
+app_update $APP_ID validate
+quit
+SCRIPT
+
+"$STEAMCMD_DIR/steamcmd.sh" +runscript "$STEAM_SCRIPT"
+rm -f "$STEAM_SCRIPT"
 
 echo "=== Server update complete ==="

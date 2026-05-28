@@ -3,6 +3,7 @@ FROM debian:bookworm-slim
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Enable 32-bit architecture (required by SteamCMD and Wine)
+# Combined into a single layer to reduce image size
 RUN dpkg --add-architecture i386 && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -19,21 +20,17 @@ RUN dpkg --add-architecture i386 && \
         gettext-base \
         procps \
         gosu \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Wine 8 (stable) from Debian repos instead of WineHQ
-# Wine 8 has proven compatibility with SE dedicated server
-RUN apt-get update && \
+    && \
     apt-get install -y --install-recommends \
         wine \
         wine64 \
         wine32 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install winetricks (pinned to release tag for reproducible builds)
-ARG WINETRICKS_TAG=20260125
+# Install winetricks (pinned to commit SHA for reproducible builds)
+ARG WINETRICKS_SHA=b76e1ee79ac57d7aceb384f74518fc423265810c
 RUN wget -O /usr/local/bin/winetricks \
-      "https://raw.githubusercontent.com/Winetricks/winetricks/${WINETRICKS_TAG}/src/winetricks" && \
+      "https://raw.githubusercontent.com/Winetricks/winetricks/${WINETRICKS_SHA}/src/winetricks" && \
     chmod +x /usr/local/bin/winetricks
 
 # Create non-root steam user
@@ -76,7 +73,8 @@ COPY --chown=steam:steam config/ /server/config-templates/
 COPY init.sh /server/init.sh
 RUN chmod +x /server/entrypoint.sh /server/scripts/*.sh /server/init.sh
 
-EXPOSE 27016/udp
+ARG SERVER_PORT=27016
+EXPOSE ${SERVER_PORT}/udp
 
 HEALTHCHECK --interval=60s --timeout=10s --retries=3 \
     CMD pgrep -f SpaceEngineersDedicated.exe || exit 1
