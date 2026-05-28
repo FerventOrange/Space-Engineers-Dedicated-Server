@@ -28,7 +28,7 @@ RUN dpkg --add-architecture i386 && \
     && rm -rf /var/lib/apt/lists/*
 
 # Install winetricks (pinned to commit SHA for reproducible builds)
-ARG WINETRICKS_SHA=57063f0b968dbe86b0462f6f44d4c0559196d0f5
+ARG WINETRICKS_SHA=b76e1ee79ac57d7aceb384f74518fc423265810c
 RUN wget -O /usr/local/bin/winetricks \
       "https://raw.githubusercontent.com/Winetricks/winetricks/${WINETRICKS_SHA}/src/winetricks" && \
     chmod +x /usr/local/bin/winetricks
