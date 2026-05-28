@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Resource limits in docker-compose: 8G memory, 4 CPUs, 256 pids limit (`37c73f5`)
 - no-new-privileges security option in docker-compose (`37c73f5`)
 - Process group management via setsid for clean SIGTERM propagation to Wine (`37c73f5`)
+- SERVER_PASSWORD environment variable for server password protection; the entrypoint hashes the password using PBKDF2-SHA1 and injects ServerPasswordSalt/ServerPasswordHash into the SE config before every launch, and clearing the variable automatically removes password protection on restart (`497298a`)
 
 ### Changed
 

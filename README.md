@@ -41,6 +41,7 @@ Set these in a `.env` file or pass them to `docker compose`:
 | `SERVER_NAME` | `Space Engineers Server` | Server name shown in server browser |
 | `WORLD_NAME` | `Star System` | World/save name (see [Custom Maps](#custom-maps)) |
 | `SERVER_PORT` | `27016` | Game port (UDP) |
+| `SERVER_PASSWORD` | *(empty)* | Server password players must enter to join. The entrypoint hashes the value with PBKDF2-SHA1 and injects `ServerPasswordSalt`/`ServerPasswordHash` into the config on every launch. Leave empty for no password. Clearing the value after it was previously set removes the hash fields on next restart. |
 | `ADMIN_IDS` | *(empty)* | Comma-separated Steam64 IDs for admin access |
 | `MODS` | *(empty)* | Comma-separated Steam Workshop mod IDs |
 | `AUTO_UPDATE` | `true` | Update SE server on every container start |
@@ -66,6 +67,7 @@ STEAM_PASS=your_steam_password
 SERVER_NAME=My SE Server
 WORLD_NAME=Star System
 SERVER_PORT=27016
+SERVER_PASSWORD=mysecretpassword
 ADMIN_IDS=76561198000000001,76561198000000002
 MODS=754173702,857053359
 BACKUP_RETENTION_DAYS=14
