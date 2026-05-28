@@ -288,6 +288,45 @@ if [ ! -L "$CONFIG_DIR/Saves" ]; then
     ln -sfn "$WORLD_DIR" "$CONFIG_DIR/Saves"
 fi
 
+# Inject mods into world save if MODS is set and save exists
+WORLD_NAME_RAW="${WORLD_NAME:-Star System}"
+SAVE_CONFIG="$CONFIG_DIR/Saves/$WORLD_NAME_RAW/Sandbox_config.sbc"
+if [ -n "$MODS" ] && [ -f "$SAVE_CONFIG" ]; then
+    echo "=== Injecting mods into world save ==="
+    # Build XML block for mods
+    SAVE_MODS_XML="<Mods>"
+    IFS=',' read -ra SAVE_MOD_IDS <<< "$MODS"
+    for MOD_ID in "${SAVE_MOD_IDS[@]}"; do
+        MOD_ID=$(echo "$MOD_ID" | tr -d ' ')
+        SAVE_MODS_XML="$SAVE_MODS_XML
+    <ModItem>
+      <Name>${MOD_ID}.sbm</Name>
+      <PublishedFileId>${MOD_ID}</PublishedFileId>
+      <PublishedServiceName>Steam</PublishedServiceName>
+    </ModItem>"
+    done
+    SAVE_MODS_XML="$SAVE_MODS_XML
+  </Mods>"
+
+    # Replace empty <Mods /> or existing <Mods>...</Mods> block
+    MODS_SAVE_TMP=$(mktemp)
+    CLEANUP_FILES+=("$MODS_SAVE_TMP")
+    printf '%s' "$SAVE_MODS_XML" > "$MODS_SAVE_TMP"
+
+    if grep -q '<Mods />' "$SAVE_CONFIG"; then
+        sed -i "/<Mods \/>/{ r $MODS_SAVE_TMP
+d }" "$SAVE_CONFIG"
+        echo "Mods injected into $SAVE_CONFIG"
+    elif grep -q '<Mods>' "$SAVE_CONFIG"; then
+        # Replace existing <Mods>...</Mods> block
+        sed -i '/<Mods>/,/<\/Mods>/{ /<Mods>/{ r '"$MODS_SAVE_TMP"'
+}; d }' "$SAVE_CONFIG"
+        echo "Mods updated in $SAVE_CONFIG"
+    else
+        echo "WARNING: No <Mods> section found in $SAVE_CONFIG — mods may not load"
+    fi
+fi
+
 # Find the server executable
 SERVER_EXE="$INSTALL_DIR/DedicatedServer64/SpaceEngineersDedicated.exe"
 if [ ! -f "$SERVER_EXE" ]; then
